@@ -1,0 +1,27 @@
+[package]
+name = "routra"
+version = "0.1.0"
+edition = "2024"
+description = "Routra CLI — manage keys, policies, usage, and batch jobs"
+license = "MIT"
+repository = "https://github.com/routra-dev/cli"
+
+[[bin]]
+name = "routra"
+path = "src/main.rs"
+
+[dependencies]
+clap = { version = "4", features = ["derive", "env"] }
+tokio = { version = "1", features = ["full"] }
+reqwest = { version = "0.12", features = ["json", "rustls-tls"], default-features = false }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+serde_yaml = "0.9"
+anyhow = "1"
+dirs = "5"
+colored = "2"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true
