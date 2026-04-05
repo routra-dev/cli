@@ -12,6 +12,19 @@ pub async fn run(model: Option<String>, days: u32, api_key: &Option<String>, bas
 
     let resp = client.get(&path).await?;
     let data: serde_json::Value = resp.json().await?;
-    println!("{}", serde_json::to_string_pretty(&data)?);
+
+    let period = data["period"].as_str().unwrap_or("—");
+    let requests = data["total_requests"].as_i64().unwrap_or(0);
+    let input_tok = data["total_input_tokens"].as_i64().unwrap_or(0);
+    let output_tok = data["total_output_tokens"].as_i64().unwrap_or(0);
+    let cost = data["total_cost_usd"].as_f64().unwrap_or(0.0);
+
+    println!("Usage Summary ({})", period);
+    println!("{:-<40}", "");
+    println!("{:<22} {:>12}", "Requests", requests);
+    println!("{:<22} {:>12}", "Input tokens", input_tok);
+    println!("{:<22} {:>12}", "Output tokens", output_tok);
+    println!("{:<22} {:>12}", "Spend (MTD)", format!("${:.6}", cost));
+
     Ok(())
 }
