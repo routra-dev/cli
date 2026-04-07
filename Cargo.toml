@@ -2,7 +2,7 @@
 name = "routra"
 version = "0.1.0"
 edition = "2024"
-description = "Routra CLI — manage keys, policies, usage, and batch jobs"
+description = "Routra CLI - manage keys, policies, usage, and batch jobs"
 license = "MIT"
 repository = "https://github.com/routra-dev/cli"
 

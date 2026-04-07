@@ -13,7 +13,7 @@ pub async fn run(model: Option<String>, days: u32, api_key: &Option<String>, bas
     let resp = client.get(&path).await?;
     let data: serde_json::Value = resp.json().await?;
 
-    let period = data["period"].as_str().unwrap_or("—");
+    let period = data["period"].as_str().unwrap_or("-");
     let requests = data["total_requests"].as_i64().unwrap_or(0);
     let input_tok = data["total_input_tokens"].as_i64().unwrap_or(0);
     let output_tok = data["total_output_tokens"].as_i64().unwrap_or(0);

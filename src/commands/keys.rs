@@ -70,7 +70,7 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
             println!("  Key (shown once): {}", key["key"].as_str().unwrap_or("").bold());
             println!("  ID:               {}", key["id"].as_str().unwrap_or(""));
             println!();
-            println!("{}", "Store this key — it will not be shown again.".yellow());
+            println!("{}", "Store this key - it will not be shown again.".yellow());
         }
 
         KeysCmd::Rotate { id } => {
@@ -82,7 +82,7 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
             println!();
             println!("  New key (shown once): {}", key["key"].as_str().unwrap_or("").bold());
             println!();
-            println!("{}", "Store this key — it will not be shown again.".yellow());
+            println!("{}", "Store this key - it will not be shown again.".yellow());
         }
 
         KeysCmd::Revoke { id } => {

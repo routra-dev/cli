@@ -9,7 +9,7 @@ mod config;
 #[derive(Parser)]
 #[command(
     name = "routra",
-    about = "Routra CLI — One API. Every GPU Cloud.",
+    about = "Routra CLI - One API. Every GPU Cloud.",
     version,
     propagate_version = true
 )]
