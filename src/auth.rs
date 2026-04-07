@@ -7,7 +7,7 @@ pub async fn login() -> Result<()> {
     // TODO Phase 4: browser OAuth flow via pkce + local callback server
     println!("{}", "routra login".bold());
     println!();
-    println!("Enter your Routra API key (from https://app.routra.dev/keys):");
+    println!("Enter your Routra API key (from https://www.routra.dev/dashboard/keys):");
     print!("  API key: ");
     std::io::Write::flush(&mut std::io::stdout())?;
 
