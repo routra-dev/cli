@@ -56,6 +56,17 @@ impl RoutraClient {
         check_status(resp).await
     }
 
+    /// POST with no body. Does NOT check status — caller handles the response.
+    pub async fn post_empty(&self, path: &str) -> Result<Response> {
+        let url = format!("{}{}", self.base_url, path);
+        let resp = self.inner
+            .post(&url)
+            .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
+            .send()
+            .await?;
+        Ok(resp)
+    }
+
     pub async fn delete(&self, path: &str) -> Result<Response> {
         let url = format!("{}{}", self.base_url, path);
         let resp = self.inner
