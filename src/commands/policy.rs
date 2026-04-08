@@ -25,24 +25,37 @@ pub enum PolicyCmd {
     },
 }
 
-pub async fn run(cmd: PolicyCmd, api_key: &Option<String>, base_url: &Option<String>) -> Result<()> {
+pub async fn run(
+    cmd: PolicyCmd,
+    api_key: &Option<String>,
+    base_url: &Option<String>,
+) -> Result<()> {
     let client = RoutraClient::new(api_key, base_url)?;
 
     match cmd {
         PolicyCmd::Push { file } => {
-            let contents = std::fs::read_to_string(&file)
-                .with_context(|| format!("reading {file}"))?;
-            let parsed: serde_yaml::Value = serde_yaml::from_str(&contents)
-                .with_context(|| format!("parsing {file}"))?;
+            let contents =
+                std::fs::read_to_string(&file).with_context(|| format!("reading {file}"))?;
+            let parsed: serde_yaml::Value =
+                serde_yaml::from_str(&contents).with_context(|| format!("parsing {file}"))?;
 
             #[derive(serde::Serialize)]
-            struct Req { yaml: String }
-            client.post("/policies/push", &Req { yaml: contents }).await?;
+            struct Req {
+                yaml: String,
+            }
+            client
+                .post("/policies/push", &Req { yaml: contents })
+                .await?;
             let policy_count = parsed["policies"]
                 .as_mapping()
                 .map(|m| m.len())
                 .unwrap_or(0);
-            println!("{} Pushed {} policy/policies from {}", "OK".green().bold(), policy_count, file);
+            println!(
+                "{} Pushed {} policy/policies from {}",
+                "OK".green().bold(),
+                policy_count,
+                file
+            );
         }
 
         PolicyCmd::List => {
@@ -52,7 +65,7 @@ pub async fn run(cmd: PolicyCmd, api_key: &Option<String>, base_url: &Option<Str
                 println!("No policies. Push one with `routra policy push routra.yaml`");
                 return Ok(());
             }
-            println!("{:<36}  {:<20}  {}", "ID", "NAME", "STRATEGY");
+            println!("{:<36}  {:<20}  STRATEGY", "ID", "NAME");
             for p in list {
                 println!(
                     "{:<36}  {:<20}  {}",

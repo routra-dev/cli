@@ -40,15 +40,21 @@ pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<Stri
     let client = RoutraClient::new(api_key, base_url)?;
 
     match cmd {
-        BatchCmd::Create { file, policy, window } => {
-            let contents = std::fs::read_to_string(&file)
-                .with_context(|| format!("reading {file}"))?;
+        BatchCmd::Create {
+            file,
+            policy,
+            window,
+        } => {
+            let contents =
+                std::fs::read_to_string(&file).with_context(|| format!("reading {file}"))?;
 
             // Parse JSONL → Vec<serde_json::Value> to match server schema
             let mut requests: Vec<serde_json::Value> = Vec::new();
             for (i, line) in contents.lines().enumerate() {
                 let line = line.trim();
-                if line.is_empty() { continue; }
+                if line.is_empty() {
+                    continue;
+                }
                 let item: serde_json::Value = serde_json::from_str(line)
                     .with_context(|| format!("invalid JSON on line {}", i + 1))?;
                 requests.push(item);
@@ -67,16 +73,28 @@ pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<Stri
                 #[serde(skip_serializing_if = "Option::is_none")]
                 policy_name: Option<String>,
             }
-            let resp = client.post("/batch", &Req {
-                requests,
-                completion_window: window,
-                policy_name: policy,
-            }).await?;
+            let resp = client
+                .post(
+                    "/batch",
+                    &Req {
+                        requests,
+                        completion_window: window,
+                        policy_name: policy,
+                    },
+                )
+                .await?;
             let job: serde_json::Value = resp.json().await?;
 
-            println!("{} Batch job submitted ({} requests).", "OK".green().bold(), line_count);
+            println!(
+                "{} Batch job submitted ({} requests).",
+                "OK".green().bold(),
+                line_count
+            );
             println!("  ID: {}", job["id"].as_str().unwrap_or("").bold());
-            println!("  Poll with: routra batch status {}", job["id"].as_str().unwrap_or(""));
+            println!(
+                "  Poll with: routra batch status {}",
+                job["id"].as_str().unwrap_or("")
+            );
         }
 
         BatchCmd::Status { id } => {
@@ -85,7 +103,11 @@ pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<Stri
             let status = job["status"].as_str().unwrap_or("unknown");
             let completed = job["completed_count"].as_u64().unwrap_or(0);
             let total = job["request_count"].as_u64().unwrap_or(0);
-            let pct = if total > 0 { completed * 100 / total } else { 0 };
+            let pct = if total > 0 {
+                completed * 100 / total
+            } else {
+                0
+            };
 
             let status_colored = match status {
                 "complete" => status.green().bold(),
@@ -95,7 +117,10 @@ pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<Stri
                 _ => status.normal(),
             };
 
-            println!("Status: {} ({}/{} = {}%)", status_colored, completed, total, pct);
+            println!(
+                "Status: {} ({}/{} = {}%)",
+                status_colored, completed, total, pct
+            );
             if let Some(cost) = job["cost_usd"].as_f64() {
                 println!("Cost:   ${:.6}", cost);
             }
@@ -125,7 +150,10 @@ pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<Stri
             if status.is_success() {
                 println!("{} Batch job {} cancelled.", "OK".green().bold(), id);
             } else if status.as_u16() == 409 {
-                println!("{} Job already completed or failed.", "WARN".yellow().bold());
+                println!(
+                    "{} Job already completed or failed.",
+                    "WARN".yellow().bold()
+                );
             } else {
                 println!("{} {}", "ERROR".red().bold(), body);
             }
@@ -138,7 +166,10 @@ pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<Stri
                 println!("No batch jobs found.");
                 return Ok(());
             }
-            println!("{:<36}  {:<12}  {:<8}  {}", "ID", "STATUS", "REQUESTS", "COST USD");
+            println!(
+                "{:<36}  {:<12}  {:<8}  COST USD",
+                "ID", "STATUS", "REQUESTS"
+            );
             for j in jobs {
                 println!(
                     "{:<36}  {:<12}  {:<8}  ${:.6}",

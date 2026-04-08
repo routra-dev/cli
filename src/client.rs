@@ -1,5 +1,5 @@
-use anyhow::{bail, Result};
-use reqwest::{header, Client, Response};
+use anyhow::{Result, bail};
+use reqwest::{Client, Response, header};
 use serde::Serialize;
 
 use crate::config;
@@ -13,15 +13,15 @@ pub struct RoutraClient {
 }
 
 impl RoutraClient {
-    pub fn new(api_key_override: &Option<String>, base_url_override: &Option<String>) -> Result<Self> {
+    pub fn new(
+        api_key_override: &Option<String>,
+        base_url_override: &Option<String>,
+    ) -> Result<Self> {
         let cfg = config::load().unwrap_or_default();
 
-        let api_key = api_key_override
-            .clone()
-            .or(cfg.api_key)
-            .ok_or_else(|| anyhow::anyhow!(
-                "No API key found. Run `routra login` or set ROUTRA_API_KEY."
-            ))?;
+        let api_key = api_key_override.clone().or(cfg.api_key).ok_or_else(|| {
+            anyhow::anyhow!("No API key found. Run `routra login` or set ROUTRA_API_KEY.")
+        })?;
 
         let base_url = base_url_override
             .clone()
@@ -37,7 +37,8 @@ impl RoutraClient {
 
     pub async fn get(&self, path: &str) -> Result<Response> {
         let url = format!("{}{}", self.base_url, path);
-        let resp = self.inner
+        let resp = self
+            .inner
             .get(&url)
             .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
             .send()
@@ -47,7 +48,8 @@ impl RoutraClient {
 
     pub async fn post<B: Serialize>(&self, path: &str, body: &B) -> Result<Response> {
         let url = format!("{}{}", self.base_url, path);
-        let resp = self.inner
+        let resp = self
+            .inner
             .post(&url)
             .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
             .json(body)
@@ -59,7 +61,8 @@ impl RoutraClient {
     /// POST with no body. Does NOT check status — caller handles the response.
     pub async fn post_empty(&self, path: &str) -> Result<Response> {
         let url = format!("{}{}", self.base_url, path);
-        let resp = self.inner
+        let resp = self
+            .inner
             .post(&url)
             .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
             .send()
@@ -69,7 +72,8 @@ impl RoutraClient {
 
     pub async fn delete(&self, path: &str) -> Result<Response> {
         let url = format!("{}{}", self.base_url, path);
-        let resp = self.inner
+        let resp = self
+            .inner
             .delete(&url)
             .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
             .send()

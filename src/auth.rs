@@ -23,7 +23,10 @@ pub async fn login() -> Result<()> {
     cfg.api_key = Some(key);
     config::save(&cfg)?;
 
-    println!("{} Credentials saved to ~/.routra/config.json", "OK".green().bold());
+    println!(
+        "{} Credentials saved to ~/.routra/config.json",
+        "OK".green().bold()
+    );
     Ok(())
 }
 

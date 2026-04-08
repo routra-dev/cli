@@ -31,6 +31,7 @@ pub enum KeysCmd {
 }
 
 #[derive(Deserialize)]
+#[allow(dead_code)]
 struct ApiKey {
     id: String,
     name: String,
@@ -53,36 +54,68 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
                 return Ok(());
             }
 
-            println!("{:<36}  {:<20}  {:<12}  {}", "ID", "NAME", "PREFIX", "STATUS");
+            println!("{:<36}  {:<20}  {:<12}  STATUS", "ID", "NAME", "PREFIX");
             for k in keys {
-                let status = if k.is_active { "active".green() } else { "revoked".red() };
+                let status = if k.is_active {
+                    "active".green()
+                } else {
+                    "revoked".red()
+                };
                 println!("{:<36}  {:<20}  {:<12}  {}", k.id, k.name, k.prefix, status);
             }
         }
 
         KeysCmd::Create { name, policy } => {
             #[derive(serde::Serialize)]
-            struct Req { name: String, policy_name: Option<String> }
-            let resp = client.post("/keys", &Req { name, policy_name: policy }).await?;
+            struct Req {
+                name: String,
+                policy_name: Option<String>,
+            }
+            let resp = client
+                .post(
+                    "/keys",
+                    &Req {
+                        name,
+                        policy_name: policy,
+                    },
+                )
+                .await?;
             let key: serde_json::Value = resp.json().await?;
             println!("{} API key created.", "OK".green().bold());
             println!();
-            println!("  Key (shown once): {}", key["key"].as_str().unwrap_or("").bold());
+            println!(
+                "  Key (shown once): {}",
+                key["key"].as_str().unwrap_or("").bold()
+            );
             println!("  ID:               {}", key["id"].as_str().unwrap_or(""));
             println!();
-            println!("{}", "Store this key - it will not be shown again.".yellow());
+            println!(
+                "{}",
+                "Store this key - it will not be shown again.".yellow()
+            );
         }
 
         KeysCmd::Rotate { id } => {
             #[derive(serde::Serialize)]
             struct Req {}
-            let resp = client.post(&format!("/keys/{}/rotate", id), &Req {}).await?;
+            let resp = client
+                .post(&format!("/keys/{}/rotate", id), &Req {})
+                .await?;
             let key: serde_json::Value = resp.json().await?;
-            println!("{} Key rotated. Old key active for 24h.", "OK".green().bold());
+            println!(
+                "{} Key rotated. Old key active for 24h.",
+                "OK".green().bold()
+            );
             println!();
-            println!("  New key (shown once): {}", key["key"].as_str().unwrap_or("").bold());
+            println!(
+                "  New key (shown once): {}",
+                key["key"].as_str().unwrap_or("").bold()
+            );
             println!();
-            println!("{}", "Store this key - it will not be shown again.".yellow());
+            println!(
+                "{}",
+                "Store this key - it will not be shown again.".yellow()
+            );
         }
 
         KeysCmd::Revoke { id } => {

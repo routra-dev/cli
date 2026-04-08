@@ -18,8 +18,8 @@ pub fn load() -> Result<Config> {
     if !path.exists() {
         return Ok(Config::default());
     }
-    let contents = std::fs::read_to_string(&path)
-        .with_context(|| format!("reading {}", path.display()))?;
+    let contents =
+        std::fs::read_to_string(&path).with_context(|| format!("reading {}", path.display()))?;
     serde_json::from_str(&contents).context("parsing config")
 }
 
@@ -29,6 +29,5 @@ pub fn save(config: &Config) -> Result<()> {
         std::fs::create_dir_all(parent)?;
     }
     let contents = serde_json::to_string_pretty(config)?;
-    std::fs::write(&path, contents)
-        .with_context(|| format!("writing {}", path.display()))
+    std::fs::write(&path, contents).with_context(|| format!("writing {}", path.display()))
 }

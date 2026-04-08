@@ -80,9 +80,17 @@ async fn main() -> Result<()> {
         Commands::Login => auth::login().await,
         Commands::Logout => auth::logout(),
         Commands::Keys { action } => commands::keys::run(action, &cli.api_key, &cli.base_url).await,
-        Commands::Policy { action } => commands::policy::run(action, &cli.api_key, &cli.base_url).await,
-        Commands::Usage { model, days } => commands::usage::run(model, days, &cli.api_key, &cli.base_url).await,
-        Commands::Cost { breakdown, days } => commands::cost::run(breakdown, days, &cli.api_key, &cli.base_url).await,
-        Commands::Batch { action } => commands::batch::run(action, &cli.api_key, &cli.base_url).await,
+        Commands::Policy { action } => {
+            commands::policy::run(action, &cli.api_key, &cli.base_url).await
+        }
+        Commands::Usage { model, days } => {
+            commands::usage::run(model, days, &cli.api_key, &cli.base_url).await
+        }
+        Commands::Cost { breakdown, days } => {
+            commands::cost::run(breakdown, days, &cli.api_key, &cli.base_url).await
+        }
+        Commands::Batch { action } => {
+            commands::batch::run(action, &cli.api_key, &cli.base_url).await
+        }
     }
 }
