@@ -29,5 +29,15 @@ pub fn save(config: &Config) -> Result<()> {
         std::fs::create_dir_all(parent)?;
     }
     let contents = serde_json::to_string_pretty(config)?;
-    std::fs::write(&path, contents).with_context(|| format!("writing {}", path.display()))
+    std::fs::write(&path, contents).with_context(|| format!("writing {}", path.display()))?;
+
+    // Restrict file permissions to owner-only on Unix (0600)
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        std::fs::set_permissions(&path, std::fs::Permissions::from_mode(0o600))
+            .with_context(|| format!("setting permissions on {}", path.display()))?;
+    }
+
+    Ok(())
 }

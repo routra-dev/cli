@@ -20,6 +20,7 @@ serde_yaml = "0.9"
 anyhow = "1"
 dirs = "5"
 colored = "2"
+rpassword = "7"
 
 [profile.release]
 opt-level = 3

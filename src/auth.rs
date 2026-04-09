@@ -4,15 +4,11 @@ use colored::Colorize;
 use crate::config;
 
 pub async fn login() -> Result<()> {
-    // TODO Phase 4: browser OAuth flow via pkce + local callback server
     println!("{}", "routra login".bold());
     println!();
     println!("Enter your Routra API key (from https://www.routra.dev/dashboard/keys):");
-    print!("  API key: ");
-    std::io::Write::flush(&mut std::io::stdout())?;
 
-    let mut key = String::new();
-    std::io::BufRead::read_line(&mut std::io::stdin().lock(), &mut key)?;
+    let key = rpassword::prompt_password("  API key: ")?;
     let key = key.trim().to_string();
 
     if key.is_empty() {

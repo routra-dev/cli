@@ -45,25 +45,11 @@ enum Commands {
         action: commands::policy::PolicyCmd,
     },
 
-    /// View usage statistics
-    Usage {
-        /// Filter by model name
-        #[arg(long)]
-        model: Option<String>,
-        /// Number of days to look back (default: 30)
-        #[arg(long, default_value = "30")]
-        days: u32,
-    },
+    /// View usage statistics for current billing period
+    Usage,
 
-    /// View cost breakdown
-    Cost {
-        /// Break down by: provider | model | key
-        #[arg(long, default_value = "model")]
-        breakdown: String,
-        /// Number of days to look back (default: 30)
-        #[arg(long, default_value = "30")]
-        days: u32,
-    },
+    /// View cost breakdown for current billing period
+    Cost,
 
     /// Manage batch inference jobs
     Batch {
@@ -83,11 +69,11 @@ async fn main() -> Result<()> {
         Commands::Policy { action } => {
             commands::policy::run(action, &cli.api_key, &cli.base_url).await
         }
-        Commands::Usage { model, days } => {
-            commands::usage::run(model, days, &cli.api_key, &cli.base_url).await
+        Commands::Usage => {
+            commands::usage::run(&cli.api_key, &cli.base_url).await
         }
-        Commands::Cost { breakdown, days } => {
-            commands::cost::run(breakdown, days, &cli.api_key, &cli.base_url).await
+        Commands::Cost => {
+            commands::cost::run(&cli.api_key, &cli.base_url).await
         }
         Commands::Batch { action } => {
             commands::batch::run(action, &cli.api_key, &cli.base_url).await

@@ -54,14 +54,15 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
                 return Ok(());
             }
 
-            println!("{:<36}  {:<20}  {:<12}  STATUS", "ID", "NAME", "PREFIX");
+            println!("{:<36}  {:<20}  {:<12}  {:<8}  LAST USED", "ID", "NAME", "PREFIX", "STATUS");
             for k in keys {
                 let status = if k.is_active {
                     "active".green()
                 } else {
                     "revoked".red()
                 };
-                println!("{:<36}  {:<20}  {:<12}  {}", k.id, k.name, k.prefix, status);
+                let last_used = k.last_used_at.as_deref().unwrap_or("never");
+                println!("{:<36}  {:<20}  {:<12}  {:<8}  {}", k.id, k.name, k.prefix, status, last_used);
             }
         }
 
@@ -119,6 +120,14 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
         }
 
         KeysCmd::Revoke { id } => {
+            print!("Revoke key {}? This cannot be undone. [y/N] ", id);
+            std::io::Write::flush(&mut std::io::stdout())?;
+            let mut answer = String::new();
+            std::io::BufRead::read_line(&mut std::io::stdin().lock(), &mut answer)?;
+            if !answer.trim().eq_ignore_ascii_case("y") {
+                println!("Cancelled.");
+                return Ok(());
+            }
             client.delete(&format!("/keys/{}", id)).await?;
             println!("{} Key {} revoked.", "OK".green().bold(), id);
         }
