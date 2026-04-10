@@ -4,6 +4,7 @@ use colored::Colorize;
 use serde::Deserialize;
 
 use crate::client::RoutraClient;
+use super::CmdCtx;
 
 #[derive(Subcommand)]
 pub enum KeysCmd {
@@ -14,7 +15,7 @@ pub enum KeysCmd {
         /// Human-readable name for the key
         #[arg(long)]
         name: String,
-        /// Attach a routing policy to this key
+        /// Attach a routing policy (ID) to this key
         #[arg(long)]
         policy: Option<String>,
     },
@@ -31,22 +32,26 @@ pub enum KeysCmd {
 }
 
 #[derive(Deserialize)]
-#[allow(dead_code)]
 struct ApiKey {
     id: String,
     name: String,
     prefix: String,
     is_active: bool,
-    created_at: String,
+    _created_at: String,
     last_used_at: Option<String>,
 }
 
-pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<String>) -> Result<()> {
-    let client = RoutraClient::new(api_key, base_url)?;
+pub async fn run(cmd: KeysCmd, ctx: &CmdCtx) -> Result<()> {
+    let client = RoutraClient::new(&ctx.api_key, &ctx.base_url)?;
 
     match cmd {
         KeysCmd::List => {
             let resp = client.get("/keys").await?;
+            if ctx.is_json() {
+                let data: serde_json::Value = resp.json().await?;
+                println!("{}", serde_json::to_string_pretty(&data)?);
+                return Ok(());
+            }
             let keys: Vec<ApiKey> = resp.json().await?;
 
             if keys.is_empty() {
@@ -70,18 +75,23 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
             #[derive(serde::Serialize)]
             struct Req {
                 name: String,
-                policy_name: Option<String>,
+                #[serde(skip_serializing_if = "Option::is_none")]
+                policy_id: Option<String>,
             }
             let resp = client
                 .post(
                     "/keys",
                     &Req {
                         name,
-                        policy_name: policy,
+                        policy_id: policy,
                     },
                 )
                 .await?;
             let key: serde_json::Value = resp.json().await?;
+            if ctx.is_json() {
+                println!("{}", serde_json::to_string_pretty(&key)?);
+                return Ok(());
+            }
             println!("{} API key created.", "OK".green().bold());
             println!();
             println!(
@@ -103,6 +113,10 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
                 .post(&format!("/keys/{}/rotate", id), &Req {})
                 .await?;
             let key: serde_json::Value = resp.json().await?;
+            if ctx.is_json() {
+                println!("{}", serde_json::to_string_pretty(&key)?);
+                return Ok(());
+            }
             println!(
                 "{} Key rotated. Old key active for 24h.",
                 "OK".green().bold()
@@ -120,16 +134,16 @@ pub async fn run(cmd: KeysCmd, api_key: &Option<String>, base_url: &Option<Strin
         }
 
         KeysCmd::Revoke { id } => {
-            print!("Revoke key {}? This cannot be undone. [y/N] ", id);
-            std::io::Write::flush(&mut std::io::stdout())?;
-            let mut answer = String::new();
-            std::io::BufRead::read_line(&mut std::io::stdin().lock(), &mut answer)?;
-            if !answer.trim().eq_ignore_ascii_case("y") {
+            if !ctx.confirm(&format!("Revoke key {}? This cannot be undone.", id)) {
                 println!("Cancelled.");
                 return Ok(());
             }
             client.delete(&format!("/keys/{}", id)).await?;
-            println!("{} Key {} revoked.", "OK".green().bold(), id);
+            if ctx.is_json() {
+                println!(r#"{{"ok": true, "id": "{}"}}"#, id);
+            } else {
+                println!("{} Key {} revoked.", "OK".green().bold(), id);
+            }
         }
     }
 

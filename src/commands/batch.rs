@@ -3,6 +3,7 @@ use clap::Subcommand;
 use colored::Colorize;
 
 use crate::client::RoutraClient;
+use super::CmdCtx;
 
 #[derive(Subcommand)]
 pub enum BatchCmd {
@@ -36,8 +37,8 @@ pub enum BatchCmd {
     List,
 }
 
-pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<String>) -> Result<()> {
-    let client = RoutraClient::new(api_key, base_url)?;
+pub async fn run(cmd: BatchCmd, ctx: &CmdCtx) -> Result<()> {
+    let client = RoutraClient::new(&ctx.api_key, &ctx.base_url)?;
 
     match cmd {
         BatchCmd::Create {
@@ -143,20 +144,8 @@ pub async fn run(cmd: BatchCmd, api_key: &Option<String>, base_url: &Option<Stri
         }
 
         BatchCmd::Cancel { id } => {
-            let resp = client.post_empty(&format!("/batch/{}/cancel", id)).await?;
-            let status = resp.status();
-            let body: serde_json::Value = resp.json().await?;
-
-            if status.is_success() {
-                println!("{} Batch job {} cancelled.", "OK".green().bold(), id);
-            } else if status.as_u16() == 409 {
-                println!(
-                    "{} Job already completed or failed.",
-                    "WARN".yellow().bold()
-                );
-            } else {
-                println!("{} {}", "ERROR".red().bold(), body);
-            }
+            client.post_empty(&format!("/batch/{}/cancel", id)).await?;
+            println!("{} Batch job {} cancelled.", "OK".green().bold(), id);
         }
 
         BatchCmd::List => {

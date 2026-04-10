@@ -1,15 +1,18 @@
 use anyhow::Result;
 
 use crate::client::RoutraClient;
+use super::CmdCtx;
 
-pub async fn run(
-    api_key: &Option<String>,
-    base_url: &Option<String>,
-) -> Result<()> {
-    let client = RoutraClient::new(api_key, base_url)?;
+pub async fn run(ctx: &CmdCtx) -> Result<()> {
+    let client = RoutraClient::new(&ctx.api_key, &ctx.base_url)?;
 
     let resp = client.get("/usage/cost-breakdown").await?;
     let data: serde_json::Value = resp.json().await?;
+
+    if ctx.is_json() {
+        println!("{}", serde_json::to_string_pretty(&data)?);
+        return Ok(());
+    }
 
     let items = match data.as_array() {
         Some(arr) if !arr.is_empty() => arr,

@@ -84,14 +84,14 @@ policies:
 ### Usage
 
 ```bash
-# View usage summary for the current billing period
+# View usage summary for the current billing period (all modalities: chat, images, TTS, STT)
 routra usage
 ```
 
 ### Cost Breakdown
 
 ```bash
-# View cost breakdown by model and provider
+# View cost breakdown by model and provider (includes all multimodal spend)
 routra cost
 ```
 

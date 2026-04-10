@@ -1,6 +1,7 @@
 use anyhow::{Result, bail};
 use reqwest::{Client, Response, header};
 use serde::Serialize;
+use std::time::Duration;
 
 use crate::config;
 
@@ -28,11 +29,20 @@ impl RoutraClient {
             .or(cfg.base_url)
             .unwrap_or_else(|| DEFAULT_BASE_URL.to_string());
 
+        let inner = Client::builder()
+            .timeout(Duration::from_secs(30))
+            .connect_timeout(Duration::from_secs(10))
+            .build()?;
+
         Ok(Self {
-            inner: Client::new(),
+            inner,
             api_key,
             base_url,
         })
+    }
+
+    fn auth_header(&self) -> String {
+        format!("Bearer {}", self.api_key)
     }
 
     pub async fn get(&self, path: &str) -> Result<Response> {
@@ -40,7 +50,7 @@ impl RoutraClient {
         let resp = self
             .inner
             .get(&url)
-            .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
+            .header(header::AUTHORIZATION, self.auth_header())
             .send()
             .await?;
         check_status(resp).await
@@ -51,23 +61,34 @@ impl RoutraClient {
         let resp = self
             .inner
             .post(&url)
-            .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
+            .header(header::AUTHORIZATION, self.auth_header())
             .json(body)
             .send()
             .await?;
         check_status(resp).await
     }
 
-    /// POST with no body. Does NOT check status — caller handles the response.
     pub async fn post_empty(&self, path: &str) -> Result<Response> {
         let url = format!("{}{}", self.base_url, path);
         let resp = self
             .inner
             .post(&url)
-            .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
+            .header(header::AUTHORIZATION, self.auth_header())
             .send()
             .await?;
-        Ok(resp)
+        check_status(resp).await
+    }
+
+    pub async fn put<B: Serialize>(&self, path: &str, body: &B) -> Result<Response> {
+        let url = format!("{}{}", self.base_url, path);
+        let resp = self
+            .inner
+            .put(&url)
+            .header(header::AUTHORIZATION, self.auth_header())
+            .json(body)
+            .send()
+            .await?;
+        check_status(resp).await
     }
 
     pub async fn delete(&self, path: &str) -> Result<Response> {
@@ -75,7 +96,7 @@ impl RoutraClient {
         let resp = self
             .inner
             .delete(&url)
-            .header(header::AUTHORIZATION, format!("Bearer {}", self.api_key))
+            .header(header::AUTHORIZATION, self.auth_header())
             .send()
             .await?;
         check_status(resp).await
@@ -88,6 +109,14 @@ async fn check_status(resp: Response) -> Result<Response> {
     } else {
         let status = resp.status();
         let body = resp.text().await.unwrap_or_default();
+
+        // Try to extract structured error message from JSON
+        if let Ok(json) = serde_json::from_str::<serde_json::Value>(&body) {
+            if let Some(msg) = json["error"]["message"].as_str() {
+                bail!("{} ({})", msg, status);
+            }
+        }
         bail!("API error {}: {}", status, body)
     }
 }
+
