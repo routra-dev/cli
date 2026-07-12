@@ -9,7 +9,8 @@ use super::CmdCtx;
 pub enum BatchCmd {
     /// Submit a JSONL file as a batch job
     Create {
-        /// Path to JSONL file with one chat request per line
+        /// Path to JSONL file in OpenAI batch format: one object per line
+        /// with {"custom_id", "method", "url", "body"}
         file: String,
         /// Policy to apply to this batch
         #[arg(long)]
@@ -58,6 +59,19 @@ pub async fn run(cmd: BatchCmd, ctx: &CmdCtx) -> Result<()> {
                 }
                 let item: serde_json::Value = serde_json::from_str(line)
                     .with_context(|| format!("invalid JSON on line {}", i + 1))?;
+                // Validate the batch item shape up front so the user gets a
+                // clear error instead of a server-side 422.
+                for field in ["custom_id", "method", "url", "body"] {
+                    if item.get(field).is_none() {
+                        anyhow::bail!(
+                            "line {}: missing \"{}\" — each JSONL line must be an OpenAI \
+                             batch item: {{\"custom_id\": \"...\", \"method\": \"POST\", \
+                             \"url\": \"/v1/chat/completions\", \"body\": {{...}}}}",
+                            i + 1,
+                            field
+                        );
+                    }
+                }
                 requests.push(item);
             }
 

@@ -42,7 +42,8 @@ pub async fn run(cmd: ProviderKeysCmd, ctx: &CmdCtx) -> Result<()> {
                 return Ok(());
             }
 
-            let keys = data.as_array().map(|a| a.as_slice()).unwrap_or(&[]);
+            // Server wraps the list: { "data": [...] }
+            let keys = data["data"].as_array().map(|a| a.as_slice()).unwrap_or(&[]);
             if keys.is_empty() {
                 println!("No provider keys stored. Add one with `routra provider-keys store <provider> --key <key>`");
                 return Ok(());
@@ -59,12 +60,22 @@ pub async fn run(cmd: ProviderKeysCmd, ctx: &CmdCtx) -> Result<()> {
         }
 
         ProviderKeysCmd::Store { provider, key } => {
+            // Server contract: POST /provider-keys with the slug in the BODY
+            // (StoreKeyRequest { provider_slug, api_key }); the slugged path
+            // only supports DELETE and /verify.
             #[derive(serde::Serialize)]
             struct Req {
+                provider_slug: String,
                 api_key: String,
             }
             client
-                .post(&format!("/provider-keys/{}", provider), &Req { api_key: key })
+                .post(
+                    "/provider-keys",
+                    &Req {
+                        provider_slug: provider.clone(),
+                        api_key: key,
+                    },
+                )
                 .await?;
 
             if ctx.is_json() {
@@ -91,15 +102,24 @@ pub async fn run(cmd: ProviderKeysCmd, ctx: &CmdCtx) -> Result<()> {
                 return Ok(());
             }
 
-            let valid = data["valid"].as_bool().unwrap_or(false);
-            if valid {
-                println!("{} Key for {} is valid.", "OK".green().bold(), provider);
-            } else {
-                println!(
-                    "{} Key for {} is invalid or expired.",
+            // Server contract: VerifyKeyResponse { provider_slug, status, message }
+            // where status is "valid" | "invalid" | "unknown".
+            let status = data["status"].as_str().unwrap_or("unknown");
+            let message = data["message"].as_str().unwrap_or("");
+            match status {
+                "valid" => println!("{} Key for {} is valid.", "OK".green().bold(), provider),
+                "invalid" => println!(
+                    "{} Key for {} is invalid or expired. {}",
                     "FAIL".red().bold(),
-                    provider
-                );
+                    provider,
+                    message
+                ),
+                _ => println!(
+                    "{} Could not verify key for {}: {}",
+                    "?".yellow().bold(),
+                    provider,
+                    message
+                ),
             }
         }
 

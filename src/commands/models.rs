@@ -14,7 +14,9 @@ pub async fn run(ctx: &CmdCtx) -> Result<()> {
         return Ok(());
     }
 
-    let items = data.as_array().map(|a| a.as_slice()).unwrap_or(&[]);
+    // Server contract: ModelCatalogResponse { version, models: [CatalogModelEntry] }
+    // where each entry's identifier field is `id`.
+    let items = data["models"].as_array().map(|a| a.as_slice()).unwrap_or(&[]);
     if items.is_empty() {
         println!("No models found.");
         return Ok(());
@@ -25,7 +27,7 @@ pub async fn run(ctx: &CmdCtx) -> Result<()> {
         "SLUG", "TIER", "TYPE", "PARAMS(B)"
     );
     for m in items {
-        let slug = m["slug"].as_str().unwrap_or("-");
+        let slug = m["id"].as_str().unwrap_or("-");
         let tier = m["tier"].as_str().unwrap_or("-");
         let model_type = m["model_type"].as_str().unwrap_or("-");
         let params = m["param_count_b"]

@@ -58,22 +58,26 @@ pub async fn run(ctx: &CmdCtx, cmd: NotificationsCmd) -> Result<()> {
                 return Ok(());
             }
 
+            // Server contract: InboxItemResponse { id, event_type, title, body, is_read, created_at }
             println!("{:<36}  {:<6}  {:<20}  MESSAGE", "ID", "READ", "CREATED");
             for n in items {
                 let id = n["id"].as_str().unwrap_or("-");
-                let read = if n["read"].as_bool().unwrap_or(false) {
+                let read = if n["is_read"].as_bool().unwrap_or(false) {
                     "yes"
                 } else {
                     "no"
                 };
                 let created = n["created_at"].as_str().unwrap_or("-");
-                let message = n["message"].as_str().unwrap_or("-");
+                let title = n["title"].as_str().unwrap_or("-");
+                let body = n["body"].as_str().unwrap_or("");
                 println!(
-                    "{:<36}  {:<6}  {:<20}  {}",
+                    "{:<36}  {:<6}  {:<20}  {}{}{}",
                     id,
                     read,
                     &created[..19.min(created.len())],
-                    message,
+                    title,
+                    if body.is_empty() { "" } else { " — " },
+                    body,
                 );
             }
 
@@ -88,7 +92,7 @@ pub async fn run(ctx: &CmdCtx, cmd: NotificationsCmd) -> Result<()> {
                 return Ok(());
             }
 
-            let count = data["count"].as_u64().unwrap_or(0);
+            let count = data["unread_count"].as_u64().unwrap_or(0);
             println!("Unread notifications: {}", count);
             Ok(())
         }
@@ -119,15 +123,16 @@ pub async fn run(ctx: &CmdCtx, cmd: NotificationsCmd) -> Result<()> {
                 return Ok(());
             }
 
+            // Server contract: NotificationPreferenceResponse { event_type, email_enabled, in_app_enabled }
             println!("{:<24}  {:<8}  EMAIL", "EVENT TYPE", "IN-APP");
             for p in items {
                 let event = p["event_type"].as_str().unwrap_or("-");
-                let in_app = if p["in_app"].as_bool().unwrap_or(false) {
+                let in_app = if p["in_app_enabled"].as_bool().unwrap_or(false) {
                     "on"
                 } else {
                     "off"
                 };
-                let email = if p["email"].as_bool().unwrap_or(false) {
+                let email = if p["email_enabled"].as_bool().unwrap_or(false) {
                     "on"
                 } else {
                     "off"
@@ -142,13 +147,34 @@ pub async fn run(ctx: &CmdCtx, cmd: NotificationsCmd) -> Result<()> {
             in_app,
             email,
         } => {
-            let mut body = serde_json::json!({ "event_type": event_type });
-            if let Some(v) = in_app {
-                body["in_app"] = serde_json::Value::Bool(v);
-            }
-            if let Some(v) = email {
-                body["email"] = serde_json::Value::Bool(v);
-            }
+            // Server contract: UpdatePreferenceRequest requires BOTH
+            // email_enabled and in_app_enabled. When the user sets only one
+            // flag, fetch the current preference and keep the other value
+            // (defaulting to enabled if no preference exists yet).
+            let (cur_in_app, cur_email) = if in_app.is_none() || email.is_none() {
+                let resp = client.get("/notifications/preferences").await?;
+                let prefs: serde_json::Value = resp.json().await?;
+                let existing = prefs
+                    .as_array()
+                    .and_then(|arr| {
+                        arr.iter()
+                            .find(|p| p["event_type"].as_str() == Some(event_type.as_str()))
+                    })
+                    .cloned()
+                    .unwrap_or_default();
+                (
+                    existing["in_app_enabled"].as_bool().unwrap_or(true),
+                    existing["email_enabled"].as_bool().unwrap_or(true),
+                )
+            } else {
+                (true, true) // unused - both flags provided
+            };
+
+            let body = serde_json::json!({
+                "event_type": event_type,
+                "in_app_enabled": in_app.unwrap_or(cur_in_app),
+                "email_enabled": email.unwrap_or(cur_email),
+            });
 
             let resp = client.put("/notifications/preferences", &body).await?;
             let data: serde_json::Value = resp.json().await?;

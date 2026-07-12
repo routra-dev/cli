@@ -44,7 +44,7 @@ pub async fn run(cmd: BillingCmd, ctx: &CmdCtx) -> Result<()> {
 
             let tier = data["billing_tier"].as_str().unwrap_or("-");
             let credit = data["credit_balance_usd"].as_f64().unwrap_or(0.0);
-            let spend = data["monthly_spend_usd"].as_f64().unwrap_or(0.0);
+            let spend = data["spend_month_usd"].as_f64().unwrap_or(0.0);
             let status = data["subscription_status"].as_str().unwrap_or("none");
 
             println!("Billing Info");

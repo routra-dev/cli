@@ -15,7 +15,7 @@ pub enum KeysCmd {
         /// Human-readable name for the key
         #[arg(long)]
         name: String,
-        /// Attach a routing policy (ID) to this key
+        /// Attach a routing policy (by name) to this key
         #[arg(long)]
         policy: Option<String>,
     },
@@ -31,13 +31,13 @@ pub enum KeysCmd {
     },
 }
 
+/// Mirrors the server's `KeySummary` response (crates/server/src/routes/keys.rs).
 #[derive(Deserialize)]
 struct ApiKey {
     id: String,
-    name: String,
+    name: Option<String>,
     prefix: String,
     is_active: bool,
-    _created_at: String,
     last_used_at: Option<String>,
 }
 
@@ -67,23 +67,26 @@ pub async fn run(cmd: KeysCmd, ctx: &CmdCtx) -> Result<()> {
                     "revoked".red()
                 };
                 let last_used = k.last_used_at.as_deref().unwrap_or("never");
-                println!("{:<36}  {:<20}  {:<12}  {:<8}  {}", k.id, k.name, k.prefix, status, last_used);
+                let name = k.name.as_deref().unwrap_or("-");
+                println!("{:<36}  {:<20}  {:<12}  {:<8}  {}", k.id, name, k.prefix, status, last_used);
             }
         }
 
         KeysCmd::Create { name, policy } => {
+            // Server contract: CreateKeyRequest { name, policy_name } — the
+            // policy is referenced by NAME, not ID.
             #[derive(serde::Serialize)]
             struct Req {
                 name: String,
                 #[serde(skip_serializing_if = "Option::is_none")]
-                policy_id: Option<String>,
+                policy_name: Option<String>,
             }
             let resp = client
                 .post(
                     "/keys",
                     &Req {
                         name,
-                        policy_id: policy,
+                        policy_name: policy,
                     },
                 )
                 .await?;

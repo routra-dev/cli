@@ -33,11 +33,12 @@ pub async fn run(ctx: &CmdCtx, limit: u32, offset: u32) -> Result<()> {
         let latency = r["latency_ms"].as_u64().unwrap_or(0);
         let cost = r["cost_usd"].as_f64().unwrap_or(0.0);
         let created = r["created_at"].as_str().unwrap_or("-");
-        // Truncate long model names
-        let model_display = if model.len() > 20 {
-            &model[..17]
+        // Truncate long model names on a char boundary (a byte slice would
+        // panic on multibyte names).
+        let model_display: String = if model.chars().count() > 20 {
+            model.chars().take(17).collect::<String>() + "..."
         } else {
-            model
+            model.to_string()
         };
         println!(
             "{:<36}  {:<20}  {:<14}  {:>6}ms  {:>10}  {}",

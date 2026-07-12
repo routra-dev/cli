@@ -14,7 +14,8 @@ pub enum WebhooksCmd {
         /// URL to receive webhook events (must be HTTPS)
         #[arg(long)]
         url: String,
-        /// Events to subscribe to (comma-separated, e.g. "spend.cap,key.rotated")
+        /// Events to subscribe to, comma-separated. Valid events:
+        /// key.expiring, batch.completed, spend.cap_approaching
         #[arg(long, value_delimiter = ',')]
         events: Vec<String>,
     },
@@ -48,7 +49,7 @@ pub async fn run(cmd: WebhooksCmd, ctx: &CmdCtx) -> Result<()> {
             for w in webhooks {
                 let id = w["id"].as_str().unwrap_or("");
                 let url = w["url"].as_str().unwrap_or("");
-                let active = w["active"].as_bool().unwrap_or(false);
+                let active = w["is_active"].as_bool().unwrap_or(false);
                 let events = w["events"]
                     .as_array()
                     .map(|a| {

@@ -14,7 +14,7 @@ pub async fn run(ctx: &CmdCtx) -> Result<()> {
         return Ok(());
     }
 
-    let period = data["period_start"].as_str().unwrap_or("-");
+    let period = data["period"].as_str().unwrap_or("-");
     let requests = data["total_requests"].as_i64().unwrap_or(0);
     let input_tok = data["total_input_tokens"].as_i64().unwrap_or(0);
     let output_tok = data["total_output_tokens"].as_i64().unwrap_or(0);
